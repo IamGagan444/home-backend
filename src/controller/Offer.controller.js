@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { transporter } from "../utils/MailTransporter.js";
+import { Product } from "../models/Product.model.js";
 
 const makeOffer = AsyncHandler(async (req, res, next) => {
   const { productId, offeredPrice, userId, BuyerEmail, sellerId } = req.body;
@@ -128,19 +129,27 @@ const viewOffer = AsyncHandler(async (req, res, next) => {
 });
 
 const acceptOffer = AsyncHandler(async (req, res, next) => {
-  const { offerId } = req.body;
+  const { offerId, sellerId, offeredPrice } = req.body;
+  console.log(req.body);
 
-  if (!offerId) {
-    return next(new ApiError(400, "offerId is required"));
+  if (!offerId || !sellerId || !offeredPrice) {
+    return next(new ApiError(400, "both is required"));
   }
 
-  const offer = await Offer.findByIdAndUpdate(
-    offerId,
+  const offer = await Offer.findOneAndUpdate(
+    { _id: offerId, sellerId },
+    { status: "accept" },
+    { new: true },
+  );
+  console.log("offer", offer);
+  const product = await Product.findByIdAndUpdate(
+    offer?.productId,
     {
-      status: "accept",
+      offeredPrice,
     },
     { new: true },
   );
+  console.log("product", product);
 
   const mailOptions = {
     from: "gaganpalai987@gmail.com",
@@ -156,24 +165,24 @@ const acceptOffer = AsyncHandler(async (req, res, next) => {
     }
   });
 
-return res.status(200).json(new ApiResponse(200, "offer accepted", offer));
-
+  return res.status(200).json(new ApiResponse(200, "offer accepted", offer));
 });
 
 const rejectOffer = AsyncHandler(async (req, res, next) => {
-  const { offerId } = req.body;
+  const { offerId, sellerId } = req.body;
+  console.log(req.body);
 
-  if (!offerId) {
-    return next(new ApiError(400, "offerId is required"));
+  if (!offerId || !sellerId ) {
+    return next(new ApiError(400, "both is required"));
   }
 
-  const offer = await Offer.findByIdAndUpdate(
-    offerId,
-    {
-      status: "reject",
-    },
+  const offer = await Offer.findOneAndUpdate(
+    { _id: offerId, sellerId },
+    { status: "reject" },
     { new: true },
   );
+  console.log("offer", offer);
+
 
   const mailOptions = {
     from: "gaganpalai987@gmail.com",
@@ -189,9 +198,7 @@ const rejectOffer = AsyncHandler(async (req, res, next) => {
     }
   });
 
-return res.status(200).json(new ApiResponse(200, "offer Rejected", offer));
+  return res.status(200).json(new ApiResponse(200, "offer rejected", offer));
+});
 
-
-})
-
-export { makeOffer, getOffer, viewOffer,acceptOffer,rejectOffer };
+export { makeOffer, getOffer, viewOffer, acceptOffer, rejectOffer };
