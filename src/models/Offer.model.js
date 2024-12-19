@@ -1,10 +1,36 @@
 import mongoose from "mongoose";
 
 const OfferSchema = new mongoose.Schema({
-    userId: mongoose.Schema.Types.ObjectId,
-    productId: mongoose.Schema.Types.ObjectId,
-    offerPrice: Number,
-    description: String,
-  });
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
+  },
+  sellerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  offeredPrice: {
+    type: String,
+    required: true,
+  },
+  BuyerEmail: {
+    type: String,
+    required: true,
+  },
+  status:{
+    type:String,
+    enum:["accept","pending","reject","counter"],
+    default:"pending"
+  }
+  
+});
 
-  export const Offer=mongoose.models.Offer||mongoose.model("Offer",OfferSchema)
+export const Offer =
+  mongoose.models.Offer || mongoose.model("Offer", OfferSchema);

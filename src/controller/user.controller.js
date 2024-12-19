@@ -35,6 +35,7 @@ const userRegister = AsyncHandler(async (req, res, next) => {
   }
 
   const isUserExist = await User.findOne({ email });
+  console.log("exist",isUserExist)
 
   if (isUserExist) {
     next(new ApiError(400, "user is already exists with this email"));

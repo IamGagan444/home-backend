@@ -5,20 +5,71 @@ import { AsyncHandler } from "../utils/asyncHandler.js";
 import { transporter } from "../utils/MailTransporter.js";
 
 const makeOffer = AsyncHandler(async (req, res, next) => {
-  const { productId, offerPrice, description, userId } = req.body;
-  if(!userId||!productId||!offerPrice){
-    next(new ApiError(400,"userid is required!"))
+  const { productId, offeredPrice, userId, BuyerEmail, sellerId } = req.body;
+
+  console.log({ productId, offeredPrice, userId, BuyerEmail, sellerId });
+
+  // Validate input
+  if (!userId || !productId || !offeredPrice || !BuyerEmail || !sellerId) {
+    return next(
+      new ApiError(
+        400,
+        "productId, offerPrice, userId, email, and sellerId are required!",
+      ),
+    );
   }
 
-  const offer = new Offer({ userId, productId, offerPrice, description });
-  await offer.save();
+  // Check if an offer already exists
+  const existingOffer = await Offer.findOne({ userId, productId });
 
-  // Send email
+  if (existingOffer) {
+    // Update the existing offer
+    existingOffer.offeredPrice = offeredPrice;
+    await existingOffer.save();
+
+    // Send email notification
+    const mailOptions = {
+      from: "gaganpalai987@gmail.com",
+      to: "gaganjobs09@gmail.com",
+      subject: "Offer Updated",
+      text: `An existing offer has been updated:
+Product ID: ${productId}
+New Offer Price: $${offeredPrice}`,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log("Error sending email:", error);
+      } else {
+        console.log("Email sent:", info.response);
+      }
+    });
+
+    return res.json({
+      success: true,
+      message: "Offer updated successfully",
+      offer: existingOffer,
+    });
+  }
+
+  // Create a new offer if it doesn't exist
+  const newOffer = new Offer({
+    productId,
+    offeredPrice,
+    userId,
+    BuyerEmail,
+    sellerId,
+  });
+  await newOffer.save();
+
+  // Send email notification for a new offer
   const mailOptions = {
     from: "gaganpalai987@gmail.com",
     to: "gaganjobs09@gmail.com",
     subject: "New Offer Received",
-    text: `A new offer has been made:\nProduct ID: ${productId}\nOffer Price: $${offerPrice}\nDescription: ${description}`,
+    text: `A new offer has been made:
+Product ID: ${productId}
+Offer Price: $${offeredPrice}`,
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
@@ -29,17 +80,22 @@ const makeOffer = AsyncHandler(async (req, res, next) => {
     }
   });
 
-  res.json({ success: true, message: "Offer sent successfully" });
+  res.json({
+    success: true,
+    message: "Offer created successfully",
+    offer: newOffer,
+  });
 });
 
+//this api will use for selere side to check how many offer seller has got
 const getOffer = AsyncHandler(async (req, res, next) => {
-  const{ userId} = req.body;
-  console.log(userId)
-  if(!userId){
-    next(new ApiError(400,"userid is required!"))
+  const { sellerId } = req.params;
+  console.log(sellerId);
+  if (!sellerId) {
+    next(new ApiError(400, "selleri d is required!"));
   }
 
-  const offers = await Offer.find({ userId }).populate("productId");
+  const offers = await Offer.find({ sellerId }).populate("productId");
   //   res.json(
   //     offers.map((offer) => ({
   //       id: offer._id,
@@ -52,9 +108,90 @@ const getOffer = AsyncHandler(async (req, res, next) => {
 
   return res
     .status(200)
-    .json(
-       new ApiResponse(200, "offer fetched successfully", offers),
-    );
+    .json(new ApiResponse(200, "offer fetched successfully", offers));
 });
 
-export { makeOffer, getOffer };
+const viewOffer = AsyncHandler(async (req, res, next) => {
+  const { productId, userId } = req.body;
+
+  if (!productId || !userId) {
+    return next(new ApiError(400, "ids are required"));
+  }
+
+  const offers = await Offer.findOne({ productId, userId }).populate(
+    "productId",
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "offer fetched succesfully", offers));
+});
+
+const acceptOffer = AsyncHandler(async (req, res, next) => {
+  const { offerId } = req.body;
+
+  if (!offerId) {
+    return next(new ApiError(400, "offerId is required"));
+  }
+
+  const offer = await Offer.findByIdAndUpdate(
+    offerId,
+    {
+      status: "accept",
+    },
+    { new: true },
+  );
+
+  const mailOptions = {
+    from: "gaganpalai987@gmail.com",
+    to: "gaganjobs09@gmail.com",
+    subject: "Offer Accepted",
+    text: `A new offer has been made:Product ID: ${offer?.productId._id}Offer Price: $${offer.offeredPrice}`,
+  };
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.log("Error sending email:", error);
+    } else {
+      console.log("Email sent:", info.response);
+    }
+  });
+
+return res.status(200).json(new ApiResponse(200, "offer accepted", offer));
+
+});
+
+const rejectOffer = AsyncHandler(async (req, res, next) => {
+  const { offerId } = req.body;
+
+  if (!offerId) {
+    return next(new ApiError(400, "offerId is required"));
+  }
+
+  const offer = await Offer.findByIdAndUpdate(
+    offerId,
+    {
+      status: "reject",
+    },
+    { new: true },
+  );
+
+  const mailOptions = {
+    from: "gaganpalai987@gmail.com",
+    to: "gaganjobs09@gmail.com",
+    subject: "Offer Rejected",
+    text: `A new offer has been made:Product ID: ${offer?.productId._id}Offer Price: $${offer.offeredPrice}`,
+  };
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.log("Error sending email:", error);
+    } else {
+      console.log("Email sent:", info.response);
+    }
+  });
+
+return res.status(200).json(new ApiResponse(200, "offer Rejected", offer));
+
+
+})
+
+export { makeOffer, getOffer, viewOffer,acceptOffer,rejectOffer };

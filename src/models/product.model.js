@@ -15,6 +15,9 @@ const productSchema = new Schema(
       type: String,
       required: true,
     },
+    offeredPrice:{
+      type:String
+    },
 
     refresh_token: {
       type: String,
@@ -22,6 +25,7 @@ const productSchema = new Schema(
   },
   { timestamps: true },
 );
+
 
 export const Product =
   mongoose.models.Product || mongoose.model("Product", productSchema);
