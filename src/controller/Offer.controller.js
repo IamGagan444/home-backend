@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { transporter } from "../utils/MailTransporter.js";
-import { Product } from "../models/Product.model.js";
+import { Product } from "../models/product.model.js";
 
 const makeOffer = AsyncHandler(async (req, res, next) => {
   const { productId, offeredPrice, userId, BuyerEmail, sellerId } = req.body;
